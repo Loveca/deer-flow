@@ -123,6 +123,7 @@ Each guide is the full reference for its topic. Open the one you need.
 | Feishu, Slack, Telegram, Discord, DingTalk and other IM channels | [IM Channels](docs/guide/im-channels.md) |
 | File attachments, downloads and Office previews | [File Previews](docs/guide/file-previews.md) |
 | Token usage dashboard, workspace, chat archive | [Workspace UI](docs/guide/workspace.md) |
+| Incognito chats | [Incognito Chats](docs/guide/incognito-chats.md) |
 | Terminal workbench | [Terminal Workbench (TUI)](docs/guide/tui.md) |
 | Personal access tokens, stream actions, embedded Python client | [API Access and Python Client](docs/guide/api-and-client.md) |
 | Trace correlation, LangSmith, Langfuse, Monocle | [Tracing and Observability](docs/guide/observability.md) |
