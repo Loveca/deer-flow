@@ -26,6 +26,13 @@ export type SidecarReference = SidecarReferenceStateItem;
 
 type SidecarContextValue = {
   open: boolean;
+  /**
+   * An incognito chat leaves no persistent side thread, so every path that
+   * would create or open one is a no-op. Quoting into the main composer
+   * (``addContextToConversation``) still works: that text rides the current
+   * message and dies with the thread.
+   */
+  disabled: boolean;
   activeReferences: SidecarReference[];
   conversationQuotes: SidecarReference[];
   parentThreadId: string;
@@ -57,11 +64,14 @@ export function SidecarProvider({
   parentThreadId,
   context,
   isMock,
+  disabled = false,
 }: {
   children: ReactNode;
   parentThreadId: string;
   context: ThreadStreamOptions["context"];
   isMock?: boolean;
+  /** Incognito chats disable the side thread; quote-to-composer still works. */
+  disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [activeReferences, setActiveReferences] = useState<SidecarReference[]>(
@@ -108,6 +118,12 @@ export function SidecarProvider({
 
   const restoreSidecarThread = useCallback(
     async (options?: { force?: boolean }) => {
+      // A disabled side thread is never restored: querying would adopt a
+      // thread the incognito chat must not have, and the trigger stays hidden
+      // because the id never leaves null.
+      if (disabled) {
+        return null;
+      }
       // A non-forced restore trusts the cached id; a forced restore always
       // re-queries the backend so a sidecar deleted elsewhere reconciles to
       // null instead of pointing the trigger at a dead thread (#3555).
@@ -155,8 +171,20 @@ export function SidecarProvider({
 
       return promise;
     },
-    [isMock, parentThreadId, updateSidecarThreadId],
+    [disabled, isMock, parentThreadId, updateSidecarThreadId],
   );
+
+  // Drop any side thread adopted before the chat turned incognito (for
+  // example when an entry flow reuses the provider), so no trigger or panel
+  // can point at a persistent thread from this conversation.
+  useEffect(() => {
+    if (!disabled) {
+      return;
+    }
+    setOpen(false);
+    setActiveReferences([]);
+    updateSidecarThreadId(null);
+  }, [disabled, updateSidecarThreadId]);
 
   useEffect(() => {
     void restoreSidecarThread();
@@ -164,6 +192,9 @@ export function SidecarProvider({
 
   const openContext = useCallback(
     (nextContext: SidecarContext) => {
+      if (disabled) {
+        return;
+      }
       const nextReference = createReference(nextContext);
 
       setActiveReferences(
@@ -177,7 +208,7 @@ export function SidecarProvider({
       );
       setOpen(true);
     },
-    [createReference, open, sidecarThreadId],
+    [createReference, disabled, open, sidecarThreadId],
   );
 
   const addContextToConversation = useCallback(
@@ -206,8 +237,11 @@ export function SidecarProvider({
   }, []);
 
   const openSidecar = useCallback(() => {
+    if (disabled) {
+      return;
+    }
     setOpen(true);
-  }, []);
+  }, [disabled]);
 
   const openSelectedText = useCallback(
     (message: Message, selectedText: string, displayIndex?: number) => {
@@ -229,6 +263,7 @@ export function SidecarProvider({
   const value = useMemo<SidecarContextValue>(
     () => ({
       open,
+      disabled,
       activeReferences,
       conversationQuotes,
       parentThreadId,
@@ -253,6 +288,7 @@ export function SidecarProvider({
       clearConversationQuotes,
       close,
       conversationQuotes,
+      disabled,
       isMock,
       open,
       openContext,
