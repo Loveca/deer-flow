@@ -1220,6 +1220,7 @@ export interface Translations {
       onceTimePassed: string;
       invalidContextMode: string;
       reuseThreadRequiresThread: string;
+      incognitoThreadNotSchedulable: string;
       threadNotFound: string;
       invalidAssistant: string;
       unknownAssistant: string;
