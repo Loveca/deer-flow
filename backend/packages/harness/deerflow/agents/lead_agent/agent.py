@@ -990,12 +990,16 @@ def _complete_assembly(
 
 def _assemble_lead_agent(config: RunnableConfig, *, app_config: AppConfig) -> LeadAgentAssembly:
     # Lazy import to avoid circular dependency
+    from deerflow.runtime.context_keys import INCOGNITO_CONTEXT_KEY
     from deerflow.tools import get_available_tools
     from deerflow.tools.builtins import setup_agent, update_agent
     from deerflow.tools.builtins.tool_search import assemble_deferred_tools, build_mcp_routing_middleware, get_mcp_routing_hints_prompt_section
     from deerflow.tools.conversation import CONVERSATION_READER_CONTEXT_KEY
 
     cfg = _get_runtime_config(config)
+    # Admission pins the server-owned marker from the stored thread, so this
+    # run's prompt states the temporary-chat boundary exactly when it applies.
+    incognito = cfg.get(INCOGNITO_CONTEXT_KEY) is True
     resolved_app_config = app_config
     mode = (config.get("configurable", {}) or {}).get(
         INTERNAL_CHECKPOINT_MODE_KEY,
@@ -1286,6 +1290,7 @@ def _assemble_lead_agent(config: RunnableConfig, *, app_config: AppConfig) -> Le
             subagent_execution_capacity=subagent_execution_capacity,
             interaction_policy=interaction_policy,
             memory_enabled=memory_enabled,
+            incognito=incognito,
             bash_available=has_bash_tool(authorized_tools),
         )
         bound_middlewares = normalize_middleware_state_schemas(middlewares, mode)
@@ -1443,6 +1448,7 @@ def _assemble_lead_agent(config: RunnableConfig, *, app_config: AppConfig) -> Le
         subagent_execution_capacity=subagent_execution_capacity,
         interaction_policy=interaction_policy,
         memory_enabled=memory_enabled,
+        incognito=incognito,
         bash_available=has_bash_tool(authorized_tools),
     )
     bound_middlewares = normalize_middleware_state_schemas(middlewares, mode)
