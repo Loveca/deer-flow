@@ -354,6 +354,7 @@ export function InputBox({
   canStopStreaming = true,
   canCreateRuns = true,
   inputLocked = false,
+  incognito = false,
   agentSkillNames,
   agentSkillsLoading = false,
   ...props
@@ -363,6 +364,11 @@ export function InputBox({
   disabled?: boolean;
   /** Prevent new input while retaining cancellation of a live run. */
   inputLocked?: boolean;
+  /**
+   * An incognito chat keeps the composer bare: the surface's own notices
+   * replace the welcome suggestions and the AI disclaimer.
+   */
+  incognito?: boolean;
   context: Omit<
     AgentThreadContext,
     "thread_id" | "is_plan_mode" | "thinking_enabled" | "subagent_enabled"
@@ -3740,6 +3746,7 @@ export function InputBox({
       )}
 
       {isWelcomeMode &&
+        !incognito &&
         searchParams.get("mode") !== "skill" &&
         !showCommandSuggestions &&
         !showMentions && (
@@ -3748,14 +3755,16 @@ export function InputBox({
           </div>
         )}
 
-      <p
-        className={cn(
-          "text-muted-foreground/67 z-10 px-4 text-center text-xs leading-4",
-          !isWelcomeMode && "absolute top-full right-0 left-0",
-        )}
-      >
-        {t.inputBox.disclaimer}
-      </p>
+      {!incognito && (
+        <p
+          className={cn(
+            "text-muted-foreground/67 z-10 px-4 text-center text-xs leading-4",
+            !isWelcomeMode && "absolute top-full right-0 left-0",
+          )}
+        >
+          {t.inputBox.disclaimer}
+        </p>
+      )}
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent>
