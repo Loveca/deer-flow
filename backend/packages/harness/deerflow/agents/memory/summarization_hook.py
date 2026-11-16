@@ -8,6 +8,7 @@ from deerflow.agents.middlewares.memory_middleware import redact_queued_messages
 from deerflow.agents.middlewares.summarization_middleware import SummarizationEvent
 from deerflow.config.memory_config import get_memory_config
 from deerflow.config.pii_redaction_config import PiiRedactionConfig
+from deerflow.runtime.context_keys import is_incognito_runtime
 from deerflow.runtime.user_context import resolve_runtime_user_id
 
 
@@ -23,6 +24,8 @@ def memory_flush_hook(event: SummarizationEvent, pii_redaction_config: PiiRedact
     raw batch queued here.
     """
     if not get_memory_config().enabled or not event.thread_id:
+        return
+    if is_incognito_runtime(event.runtime):
         return
 
     user_id = resolve_runtime_user_id(event.runtime)
