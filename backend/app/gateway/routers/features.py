@@ -84,6 +84,13 @@ class ThreadActivityFeature(BaseModel):
     available: bool = Field(..., description="Whether GET /api/thread-activity, POST /api/threads/{thread_id}/read and the thread search `unread` field work (SQL persistence)")
 
 
+class IncognitoFeature(BaseModel):
+    """Availability and lifetime of incognito (temporary) chats."""
+
+    enabled: bool = Field(..., description="Whether authenticated browser clients can create incognito chats")
+    idle_ttl_seconds: int = Field(..., description="Idle window after the last activity before an incognito chat is deleted")
+
+
 class ToolApprovalFeature(BaseModel):
     enabled: bool = False
     default_mode: Literal["ask", "auto", "full"] = "ask"
@@ -101,6 +108,7 @@ class FeaturesResponse(BaseModel):
     knowledge_base: KnowledgeBaseFeature
     scheduled_tasks: ScheduledTasksFeature
     thread_activity: ThreadActivityFeature
+    incognito: IncognitoFeature
     run_inputs: bool = False
     tool_approval: ToolApprovalFeature = Field(default_factory=ToolApprovalFeature)
 
@@ -147,6 +155,12 @@ async def list_features(request: Request, config: AppConfig = Depends(get_config
         scheduled_tasks=_scheduled_tasks_feature(request, config),
         # Startup-scoped: the read repository exists only with SQL persistence.
         thread_activity=ThreadActivityFeature(available=thread_activity_available(request.app.state)),
+        # Read through ``get_config`` so the entry point and the lifetime
+        # notice follow config.yaml without a restart, like the other flags.
+        incognito=IncognitoFeature(
+            enabled=config.incognito.enabled,
+            idle_ttl_seconds=config.incognito.idle_ttl_seconds,
+        ),
     )
 
 
