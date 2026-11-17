@@ -173,6 +173,7 @@ def get_available_tools(
     app_config: AppConfig | None = None,
     extensions=None,
     chat_model: BaseChatModel | None = None,
+    incognito: bool = False,
 ) -> list[BaseTool]:
     """Get all available tools from config.
 
@@ -197,6 +198,10 @@ def get_available_tools(
         scheduler_capability: Current-run host grant for conversation schedule
             management or own-schedule stopping. Omitted for embedded,
             bootstrap and subagent assembly.
+        incognito: Whether the run belongs to an incognito thread. Durable
+            batch tools stay off there: their rows store each item's prompt and
+            execution spec, so they are a durable object derived from the
+            conversation.
 
     Returns:
         List of available tools.
@@ -255,7 +260,11 @@ def get_available_tools(
     # Add subagent tools only if enabled via runtime parameter
     if subagent_enabled:
         builtin_tools.extend(SUBAGENT_TOOLS)
-        if is_subagent_batch_runtime_available():
+        # Durable batch rows store each item's prompt and execution spec, so
+        # they are a durable object derived from the conversation. An incognito
+        # run keeps the in-process task tool but never the batch tools; the
+        # tool itself refuses as well, for re-attached copies.
+        if not incognito and is_subagent_batch_runtime_available():
             from deerflow.subagents.batch_runtime import get_subagent_batch_submitter
             from deerflow.tools.builtins.batch_task_tool import bind_batch_tools
 

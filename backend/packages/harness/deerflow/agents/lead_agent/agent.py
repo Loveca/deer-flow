@@ -1213,7 +1213,11 @@ def _assemble_lead_agent(config: RunnableConfig, *, app_config: AppConfig) -> Le
             skill_authorization=skill_authorization,
         )
         chat_model = create_chat_model(name=model_name, thinking_enabled=thinking_enabled, app_config=resolved_app_config, attach_tracing=False)
-        raw_tools = get_available_tools(model_name=model_name, subagent_enabled=subagent_enabled, app_config=resolved_app_config, chat_model=chat_model) + [setup_agent]
+        # Agent creation is durable by definition: it writes a per-user agent
+        # record and SOUL.md outside the chat. An incognito run must not leave
+        # that behind, so the bootstrap flow does not expose the tool at all.
+        bootstrap_tools = get_available_tools(model_name=model_name, subagent_enabled=subagent_enabled, app_config=resolved_app_config, chat_model=chat_model, incognito=incognito)
+        raw_tools = bootstrap_tools if incognito else [*bootstrap_tools, setup_agent]
         configured_tools = raw_tools
         configured_tools = [tool for tool in configured_tools if tool.name not in interaction_policy.disabled_tool_names]
         authorization_candidates = [*configured_tools]
@@ -1363,7 +1367,9 @@ def _assemble_lead_agent(config: RunnableConfig, *, app_config: AppConfig) -> Le
     # leave it unset, so ``update_agent`` remains available there.
     channel_name = cfg.get("channel_name")
     is_webhook_channel = channel_name in _WEBHOOK_CHANNELS
-    extra_tools = [update_agent] if agent_name and not is_webhook_channel else []
+    # An incognito run must not mutate the persisted agent either: the change
+    # outlives the chat and is visible in every later ordinary conversation.
+    extra_tools = [update_agent] if agent_name and not is_webhook_channel and not incognito else []
     # Resolve the model once so tool guidance uses the same effective settings.
     chat_model = create_chat_model(name=model_name, thinking_enabled=thinking_enabled, reasoning_effort=reasoning_effort, app_config=resolved_app_config, attach_tracing=False, model_overrides=agent_model_overrides)
     raw_tools = get_available_tools(
@@ -1371,6 +1377,7 @@ def _assemble_lead_agent(config: RunnableConfig, *, app_config: AppConfig) -> Le
         groups=agent_config.tool_groups if agent_config else None,
         mcp_plugins=getattr(agent_config, "mcp_plugins", None),
         subagent_enabled=subagent_enabled,
+        incognito=incognito,
         include_conversation_reader=callable(cfg.get(CONVERSATION_READER_CONTEXT_KEY)) and not bool(cfg.get("is_subagent")),
         **({"scheduler_capability": scheduler_capability} if scheduler_capability is not None else {}),
         app_config=resolved_app_config,
