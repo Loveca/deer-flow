@@ -43,11 +43,24 @@ def test_lifetime_above_one_year_is_rejected() -> None:
 
 
 def test_boundary_values_are_accepted() -> None:
-    shortest = IncognitoThreadsConfig(idle_ttl_seconds=3600, max_lifetime_seconds=3600)
+    shortest = IncognitoThreadsConfig(idle_ttl_seconds=3600, max_lifetime_seconds=3600, end_grace_seconds=0)
     longest = IncognitoThreadsConfig(
         idle_ttl_seconds=365 * 24 * 60 * 60,
         max_lifetime_seconds=365 * 24 * 60 * 60,
+        end_grace_seconds=365 * 24 * 60 * 60,
     )
 
     assert shortest.idle_ttl_seconds == 3600
+    assert shortest.end_grace_seconds == 0
     assert longest.max_lifetime_seconds == 31536000
+    assert longest.end_grace_seconds == 31536000
+
+
+@pytest.mark.parametrize("seconds", [31536001, 10_000 * 365 * 24 * 60 * 60], ids=["one-second-over", "datetime-overflow"])
+def test_end_grace_above_one_year_is_rejected(seconds: int) -> None:
+    with pytest.raises(ValidationError) as exc_info:
+        IncognitoThreadsConfig(end_grace_seconds=seconds)
+
+    error = exc_info.value.errors()[0]
+    assert error["loc"] == ("end_grace_seconds",)
+    assert error["type"] == "less_than_equal"

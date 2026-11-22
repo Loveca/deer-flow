@@ -140,7 +140,8 @@ year, a cap that keeps the deadline arithmetic inside `datetime`'s range. The
 one-hour idle floor exists because renewal happens on runs only: typing,
 reading or leaving the window open does not count, so a shorter window can
 expire the chat while it is still in use or right after a long run finishes.
-`end_grace_seconds` may be 0, and the sweep settings are bounded as well
+`end_grace_seconds` accepts 0 through 31536000 seconds (365 days). The thread's
+absolute lifetime still caps its deletion deadline. The sweep settings are bounded
 (`sweep_interval_seconds` 5 to 3600, `sweep_batch_size` 1 to 1000). An idle
 window equal to the absolute lifetime is allowed: the lifetime alone then
 decides when the chat goes. An out-of-range or contradictory value fails
