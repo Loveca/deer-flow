@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field, model_validator
 
+_MAX_LIFETIME_SECONDS = 365 * 24 * 60 * 60
+
 
 class IncognitoThreadsConfig(BaseModel):
     """Lifetime and sweep settings for incognito threads.
@@ -20,8 +22,9 @@ class IncognitoThreadsConfig(BaseModel):
     The idle floor is one hour because renewal happens on runs only: typing,
     reading or leaving the window open is not activity, and a window shorter
     than a single run would expire the chat right after the answer. The
-    lifetime ceiling stays below a year because a larger value overflows the
-    ``datetime`` arithmetic that schedules the deadline.
+    end grace has the same one-year upper bound as the absolute lifetime
+    because the Gateway adds the grace to the current time before applying
+    the lifetime cap.
     """
 
     enabled: bool = Field(
@@ -36,12 +39,13 @@ class IncognitoThreadsConfig(BaseModel):
     end_grace_seconds: int = Field(
         default=60 * 60,
         ge=0,
+        le=_MAX_LIFETIME_SECONDS,
         description="Grace period after an explicit end before the thread and its data are purged.",
     )
     max_lifetime_seconds: int = Field(
         default=7 * 24 * 60 * 60,
         ge=60 * 60,
-        le=365 * 24 * 60 * 60,
+        le=_MAX_LIFETIME_SECONDS,
         description="Absolute lifetime ceiling measured from creation, regardless of activity.",
     )
     sweep_interval_seconds: int = Field(

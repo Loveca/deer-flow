@@ -3804,7 +3804,7 @@ authorization:
 # the Gateway starts instead of being clamped. idle_ttl_seconds must be between
 # one hour (3600) and max_lifetime_seconds; max_lifetime_seconds must be
 # between one hour and one year (31536000), a cap that keeps the deadline
-# arithmetic inside datetime's range. end_grace_seconds may be 0,
+# arithmetic inside datetime's range. end_grace_seconds accepts 0 through 31536000.
 # sweep_interval_seconds must be between 5 and 3600, and sweep_batch_size
 # between 1 and 1000. Setting idle_ttl_seconds equal to max_lifetime_seconds is
 # allowed: the absolute lifetime alone then decides when the chat goes.
